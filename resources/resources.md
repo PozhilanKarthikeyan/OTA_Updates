@@ -6,6 +6,8 @@ For more details and full documentation, visit the [PlatformIO Docs](https://doc
 
 To learn the basics of Git and GitHub, you can watch this [Git & GitHub basic tutorial](https://www.youtube.com/watch?v=DVRQoVRzMIY).
 
+We follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) specification for all commit messages.
+
 ---
 
 ## ESP-IDF (Espressif Development Framework)
