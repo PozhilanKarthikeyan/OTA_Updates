@@ -20,8 +20,30 @@ String username;
 void setup() {
   
   Serial.begin(115200);
+  while (!Serial) {
+    delay(10);
+  }
   WiFi.mode(WIFI_STA);
   Serial.println("Initiating WiFi Connection");
+
+  // scan wifi networks
+  WiFi.disconnect();
+  delay(100);
+
+  int noOfNetworks = WiFi.scanNetworks();
+
+  if (noOfNetworks == 0) {
+    Serial.println("No networks found");
+  }
+  else {
+    Serial.print("Networks found with SSID: ");
+    for (int i = 0; i < noOfNetworks; i++) {
+      Serial.print(WiFi.SSID(i).c_str());
+      Serial.print(", ");
+    }
+
+    Serial.println();
+  }
 
   // getting user input 
   Serial.println("Enter SSID: ");
@@ -140,7 +162,7 @@ void loop() {
 
   if (!isLooped) {
     Serial.println("This code is uploaded via OTA");
-    Serial.println("test2");
+    Serial.println("test3");
     isLooped = true;
 
   }
