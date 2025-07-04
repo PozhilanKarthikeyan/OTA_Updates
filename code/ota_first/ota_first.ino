@@ -13,6 +13,8 @@ build the project in PlatformIO to get a file like {file_name}.ino.bin
 
 4) Run python3 {path_to_espota.py} -i {your_wifi_IP} -p 3232 -auth={your_OTA_Password} --file {path_to_the_bin_file}
 
+YOU CAN ALSO FIND THE VIDEO IN media
+
 */
 
 #include <ArduinoOTA.h>
@@ -179,7 +181,7 @@ void loop() {
 
   if (!isLooped) {
     Serial.println("This code is uploaded via OTA");
-    Serial.println("test334");
+    Serial.println("test35");
     isLooped = true;
 
   }
