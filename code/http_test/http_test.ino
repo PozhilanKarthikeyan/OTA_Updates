@@ -5,7 +5,7 @@ THIS IS AN EXAMPLE CODE
 to update the code, generate a bin file and run pyton3 -m http.server 8000 on the directory where the bin file is located
 do ip addr show to get your ip
 replace the firmware ip with your laptop ip
-and then do curl http://{your_ip}/update
+and then do curl http://{your_wifi_ip}/update
 
 */
 
