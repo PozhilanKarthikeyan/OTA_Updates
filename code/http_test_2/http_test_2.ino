@@ -4,8 +4,8 @@ THIS IS AN EXAMPLE CODE
 
 to update the code, generate a bin file and run pyton3 -m http.server 8000 on the directory where the bin file is located
 do ip addr show to get your ip
-replace the firmware ip with your laptop ip
-and then do curl http://{your_wifi_ip}/update
+replace the mqtt_server variable with your laptop ip
+and then do mosquitto_pub -h {laptop_ip} -t devices/esp32_001/ota/command -m update
 
 */
 
@@ -29,15 +29,19 @@ const String ENTERPRISE_WIFI[] = {
 const int NO_ENTERPRISE_WIFI = sizeof(ENTERPRISE_WIFI)/sizeof(ENTERPRISE_WIFI[0]);
 
 // Firmware URL
-const char* firmwareURL = "http://192.168.0.102:8000/http_test.ino.bin"; // set your URL here
+const char* firmwareURL = "http://192.168.0.102:8000/http_test.ino.bin"; 
 
 // WiFi details
 String ssid;
 String password;
 String username;
 
-// to check updates via web-server
-WebServer server(80);
+// WiFi and MQTT
+WiFiClient espClient;
+PubSubClient client(espClient);
+
+const char* mqtt_server = "192.168.0.102"; // laptop IP
+const char* mqtt_topic = "devices/esp32_001/ota/command";
 
 // THE BELOW VARIABLES ARE NOT REQUIRED FOR A BASIC OTA/USB UPLOAD
 // for looping in loop()
@@ -140,21 +144,14 @@ void setup() {
     Serial.print(WiFi.localIP());
     Serial.println(); 
 
-    // setup a web server endpoint
-    server.on("/update", HTTP_GET, []() {
-      server.send(200, "text/plain", "Initiating OTA update, ESP will reboot\n");
-      delay(1000);
-      performUpdate();
-    });
-
-    // begin the server
-    server.begin();
-    Serial.println("Web server started!");
-    Serial.println("Trigger update with curl http://" + WiFi.localIP().toString() + "/update");
+    // initialise mqtt server
+    client.setServer(mqtt_server, 1883);
+    client.setCallback(callback);
+    connectMQTT();
 
   }
   else {
-    Serial.print("WiFi connection failed. Rebooting.");
+    Serial.println("WiFi connection failed. Rebooting.");
     ESP.restart();
   }
 }
@@ -163,8 +160,11 @@ void loop() {
 
  if (WiFi.status() == WL_CONNECTED) {
 
-  // initiate handling server GET requests
-  server.handleClient();
+  // loop mqtt connection to check for new topics
+  if (!client.connected()) {
+    connectMQTT();
+  }
+  client.loop();
 
   // main code: generate square series 
   // SKIP IF YOU DON'T WANT THIS FUNCTIONALITY
@@ -179,6 +179,40 @@ void loop() {
     lastPrintTime = currentTime;
     
     } 
+  }
+}
+
+void callback(char* topic, byte* payload, unsigned int length) {
+  String message = "";
+
+  for (int i = 0; i < length; i++) {
+    message += (char)payload[i];
+  }
+
+  if (String(topic) == "devices/esp32_001/ota/command") {
+    if (message == "update") {
+      Serial.println("✅ MQTT command received: update. Starting OTA...");
+      performUpdate();
+    }
+  }
+}
+
+void connectMQTT(){
+  while (!client.connected()) {
+
+    // connect to MQTT server
+    Serial.println("Connecting to MQTT...");
+
+    if (client.connect("ESP32Client")) {
+      Serial.println("Connected to MQTT");
+      client.subscribe(mqtt_topic);
+    } 
+    else {
+      Serial.print("failed, rc=");
+      Serial.print(client.state());
+      Serial.println(" retrying in 5s");
+      delay(5000);
+    }
   }
 }
 

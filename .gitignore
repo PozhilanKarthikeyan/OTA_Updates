@@ -2,4 +2,5 @@ arduino-ide_2.3.2_Linux_64bit.AppImage
 log.txt
 code/ota_first/build
 code/http_test/build
+code/http_test_2/build
 ota_server
