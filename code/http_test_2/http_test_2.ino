@@ -1,10 +1,10 @@
 /*
 
-THIS IS AN EXAMPLE CODE 
+THIS IS MQTT EXAMPLE CODE
 
+replace the mqtt_server variable with your laptop ip
 to update the code, generate a bin file and run pyton3 -m http.server 8000 on the directory where the bin file is located
 do ip addr show to get your ip
-replace the mqtt_server variable with your laptop ip
 and then do mosquitto_pub -h {laptop_ip} -t devices/esp32_001/ota/command -m update
 
 */
@@ -28,8 +28,11 @@ const String ENTERPRISE_WIFI[] = {
 };
 const int NO_ENTERPRISE_WIFI = sizeof(ENTERPRISE_WIFI)/sizeof(ENTERPRISE_WIFI[0]);
 
+// Laptop IP
+const char* LAPTOP_IP = "192.168.228.68";
+
 // Firmware URL
-const char* firmwareURL = "http://192.168.0.102:8000/http_test.ino.bin"; 
+const char* firmwareURL = "http://" + LAPTOP_IP + ":8000/http_test.ino.bin"; 
 
 // WiFi details
 String ssid;
@@ -40,7 +43,7 @@ String username;
 WiFiClient espClient;
 PubSubClient client(espClient);
 
-const char* mqtt_server = "192.168.0.102"; // laptop IP
+const char* mqtt_server = LAPTOP_IP; // laptop IP
 const char* mqtt_topic = "devices/esp32_001/ota/command";
 
 // THE BELOW VARIABLES ARE NOT REQUIRED FOR A BASIC OTA/USB UPLOAD
