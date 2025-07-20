@@ -2,10 +2,11 @@
 
 THIS IS AN EXAMPLE CODE 
 
-to update the code, generate a bin file and run pyton3 -m http.server 8000 on the directory where the bin file is located
-do ip addr show to get your ip
-replace the firmware ip with your laptop ip
-and then do curl http://{your_wifi_ip}/update
+to update the code,
+ip addr show and replace the ip here and in update.py 
+generate a bin file and put it on firmware and name it firmware.bin
+python3 update.py
+curl -X POST -F "file=@firmware/firmware.bin" http://{your_ip}:5000/upload
 
 */
 
