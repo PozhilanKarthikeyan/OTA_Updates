@@ -14,6 +14,7 @@ and then do curl http://{your_wifi_ip}/update
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <Update.h>
+#include <ArduinoJson.h>
 
 // bool variables to check conditions
 bool isEnterprise = false;
@@ -27,22 +28,30 @@ const String ENTERPRISE_WIFI[] = {
 };
 const int NO_ENTERPRISE_WIFI = sizeof(ENTERPRISE_WIFI)/sizeof(ENTERPRISE_WIFI[0]);
 
-// Firmware URL
-const char* firmwareURL = "http://192.168.0.102:8000/http_test.ino.bin"; // set your URL here
-
 // WiFi details
 String ssid;
 String password;
 String username;
 
-// to check updates via web-server
-WebServer server(80);
+// Laptop IP
+const char* LAPTOP_IP = "10.42.67.196";
+
+// Device Name
+const char* deviceName = "esp32_001";
+
+// webserver URL triggers
+const String updateTriggerURL = "http://" + String(LAPTOP_IP) + ":5000/update";
+const String firmwareURL      = "http://" + String(LAPTOP_IP) + ":5000/firmware.bin";  
+
+// update check variables
+unsigned long lastUpdateCheck = millis();
 
 // THE BELOW VARIABLES ARE NOT REQUIRED FOR A BASIC OTA/USB UPLOAD
 // for looping in loop()
 unsigned long lastPrintTime = millis();
 int n = 0;
 
+void checkForUpdate();
 void performUpdate();
 
 void setup() {
@@ -139,18 +148,6 @@ void setup() {
     Serial.print(WiFi.localIP());
     Serial.println(); 
 
-    // setup a web server endpoint
-    server.on("/update", HTTP_GET, []() {
-      server.send(200, "text/plain", "Initiating OTA update, ESP will reboot\n");
-      delay(1000);
-      performUpdate();
-    });
-
-    // begin the server
-    server.begin();
-    Serial.println("Web server started!");
-    Serial.println("Trigger update with curl http://" + WiFi.localIP().toString() + "/update");
-
   }
   else {
     Serial.print("WiFi connection failed. Rebooting.");
@@ -162,13 +159,18 @@ void loop() {
 
  if (WiFi.status() == WL_CONNECTED) {
 
-  // initiate handling server GET requests
-  server.handleClient();
+  unsigned long currentTime = millis();
+
+  // check for update
+
+  if (currentTime - lastUpdateCheck > 10000) {
+    checkForUpdate();
+    lastUpdateCheck = currentTime;
+  }
 
   // main code: generate square series 
   // SKIP IF YOU DON'T WANT THIS FUNCTIONALITY
 
-  unsigned long currentTime = millis();
 
   if (currentTime - lastPrintTime > 1000) {
     
@@ -179,6 +181,40 @@ void loop() {
     
     } 
   }
+}
+
+void checkForUpdate(){
+
+  HTTPClient http;
+  http.begin(updateTriggerURL);
+  int httpCode = http.POST("");
+
+  if (httpCode == 200) {
+    String payload = http.getString();
+    
+    DynamicJsonDocument doc(1024);
+    DeserializationError error = deserializeJson(doc, payload);
+
+    if (error) {
+      Serial.print("JSON parsing failed: ");
+      Serial.println(error.c_str());
+      return;
+    }
+
+    bool update = doc["update"];
+
+    if (update) {
+      Serial.println("HTTP Update Triggered, performing OTA.");
+      http.end();
+      performUpdate();
+    }
+  }
+  else {
+    Serial.print("HTTP Error: ");
+    Serial.println(httpCode);
+  }
+
+  http.end();
 }
 
 void performUpdate() {

@@ -2,6 +2,7 @@
 
 THIS IS MQTT EXAMPLE CODE
 
+MQTT broker should be initialized by mosquito_pub
 replace the mqtt_server variable with your laptop ip
 to update the code, generate a bin file and run pyton3 -m http.server 8000 on the directory where the bin file is located
 do ip addr show to get your ip
@@ -29,10 +30,13 @@ const String ENTERPRISE_WIFI[] = {
 const int NO_ENTERPRISE_WIFI = sizeof(ENTERPRISE_WIFI)/sizeof(ENTERPRISE_WIFI[0]);
 
 // Laptop IP
-const char* LAPTOP_IP = "192.168.228.68";
+const char* LAPTOP_IP = "192.168.120.68";
+
+// Device Name
+const char* deviceName = "esp32_001";
 
 // Firmware URL
-const char* firmwareURL = "http://" + LAPTOP_IP + ":8000/http_test.ino.bin"; 
+const String firmwareURL = "http://" + String(LAPTOP_IP) + ":8000/http_test.ino.bin"; 
 
 // WiFi details
 String ssid;
@@ -44,7 +48,7 @@ WiFiClient espClient;
 PubSubClient client(espClient);
 
 const char* mqtt_server = LAPTOP_IP; // laptop IP
-const char* mqtt_topic = "devices/esp32_001/ota/command";
+const String mqtt_topic = "devices/" + String(deviceName) + "esp32_001/ota/command";
 
 // THE BELOW VARIABLES ARE NOT REQUIRED FOR A BASIC OTA/USB UPLOAD
 // for looping in loop()
@@ -192,7 +196,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
     message += (char)payload[i];
   }
 
-  if (String(topic) == "devices/esp32_001/ota/command") {
+  if (String(topic) == mqtt_topic) {
     if (message == "update") {
       Serial.println("✅ MQTT command received: update. Starting OTA...");
       performUpdate();
@@ -206,9 +210,9 @@ void connectMQTT(){
     // connect to MQTT server
     Serial.println("Connecting to MQTT...");
 
-    if (client.connect("ESP32Client")) {
+    if (client.connect(deviceName)) {
       Serial.println("Connected to MQTT");
-      client.subscribe(mqtt_topic);
+      client.subscribe(mqtt_topic.c_str());
     } 
     else {
       Serial.print("failed, rc=");
