@@ -11,11 +11,10 @@ curl -X POST -F "file=@firmware/firmware.bin" http://{your_ip}:5000/upload
 */
 
 #include <WiFi.h>
-#include <esp_wpa2.h>
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
-#include <Update.h>
 #include <ArduinoJson.h>
+#include <HTTPUpdate.h>
 
 // bool variables to check conditions
 bool isEnterprise = false;
@@ -42,7 +41,6 @@ const char* deviceName = "esp32_001";
 
 // webserver URL triggers
 const String updateTriggerURL = "http://" + String(LAPTOP_IP) + ":5000/update";
-const String firmwareURL      = "http://" + String(LAPTOP_IP) + ":5000/firmware.bin";  
 
 // update check variables
 unsigned long lastUpdateCheck = millis();
@@ -115,20 +113,22 @@ void setup() {
     username = Serial.readStringUntil('\n');
     username.trim(); // remove whitespace
 
+    const String identity = username;
+
     Serial.println("Enter Password: ");
     while (!Serial.available()) delay(10);
     password = Serial.readStringUntil('\n');
     password.trim(); // remove whitespace
-
+    
+    // connect to wifi
     Serial.print("Connecting to WiFi");
-    // Configure WPA2 Enterprise
-    esp_wifi_sta_wpa2_ent_set_identity((uint8_t*)username.c_str(), username.length());
-    esp_wifi_sta_wpa2_ent_set_username((uint8_t*)username.c_str(), username.length());
-    esp_wifi_sta_wpa2_ent_set_password((uint8_t*)password.c_str(), password.length()); 
-    esp_wifi_sta_wpa2_ent_enable();
-
-    // connect to WiFi
-    WiFi.begin(ssid.c_str()); // use c strings
+    wl_status_t status = WiFi.begin(
+      ssid.c_str(),
+      WPA2_AUTH_PEAP,
+      identity.c_str(),
+      username.c_str(),
+      password.c_str()
+    );
   }
 
   // restrict the no of connection attempts
@@ -203,11 +203,12 @@ void checkForUpdate(){
     }
 
     bool update = doc["update"];
+    const char* url = doc["url"];
 
     if (update) {
       Serial.println("HTTP Update Triggered, performing OTA.");
       http.end();
-      performUpdate();
+      performUpdate(url);
     }
   }
   else {
@@ -218,55 +219,23 @@ void checkForUpdate(){
   http.end();
 }
 
-void performUpdate() {
-  // HTTP OTA initialisation
-  Serial.println("OTA is starting...");
+void performUpdate(const char* url) {
+  Serial.println("Starting OTA update...");
 
   WiFiClient client;
+  t_httpUpdate_return ret = httpUpdate.update(client, url);
 
-  HTTPClient https;
-
-  Serial.println("Connecting to: " + String(firmwareURL));
-  if (https.begin(client, firmwareURL)) {
-    int httpCode = https.GET();
-
-    if (httpCode == HTTP_CODE_OK) {
-      int contentLength = https.getSize();
-      bool canBegin = Update.begin(contentLength);
-
-      if (canBegin) {
-        WiFiClient* updateClient = https.getStreamPtr();
-        size_t written = Update.writeStream(*updateClient);
-
-        if (written == contentLength) {
-          Serial.println("Written : " + String(written) + " successfully");
-        } else {
-          Serial.println("Written only : " + String(written) + "/" + String(contentLength) + ". Retry?");
-        }
-
-        if (Update.end()) {
-          Serial.println("OTA done!");
-          if (Update.isFinished()) {
-            Serial.println("Update successfully completed. Rebooting...");
-            
-            ESP.restart();
-          } else {
-            Serial.println("Update not finished? Something went wrong!");
-          }
-        } else {
-          Serial.println("Error Occurred. Error #: " + String(Update.getError()));
-        }
-
-      } else {
-        Serial.println("Not enough space to begin OTA");
-      }
-
-    } else {
-      Serial.println("GET request failed. HTTP Code: " + https.errorToString(httpCode));
-    }
-
-    https.end();
-  } else {
-    Serial.println("HTTPS connection failed");
+  switch (ret) {
+    case HTTP_UPDATE_FAILED:
+      Serial.printf("OTA failed. Error (%d): %s\n",
+        httpUpdate.getLastError(),
+        httpUpdate.getLastErrorString().c_str());
+      break;
+    case HTTP_UPDATE_NO_UPDATES:
+      Serial.println("No OTA update available.");
+      break;
+    case HTTP_UPDATE_OK:
+      Serial.println("OTA successful! Rebooting...");
+      break;
   }
 }
