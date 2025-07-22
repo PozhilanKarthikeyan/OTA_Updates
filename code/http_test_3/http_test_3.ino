@@ -14,6 +14,8 @@ curl -X POST -F "file=@firmware/firmware.bin" http://{your_ip}:5000/upload
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include <HTTPUpdate.h>
+#include "esp_wifi.h"
+#include "esp_system.h"
 
 // bool variables to check conditions
 bool isEnterprise = false;
@@ -51,6 +53,7 @@ int n = 0;
 
 void checkForUpdate();
 void performUpdate();
+String getMAC();
 
 void setup() {
   
@@ -144,8 +147,10 @@ void setup() {
   if (WiFi.status() == WL_CONNECTED) {
     Serial.print("Connected to WIFI with SSID ");
     Serial.print(ssid);
-    Serial.print(" and with IP address ");
+    Serial.print(" ,with IP address ");
     Serial.print(WiFi.localIP());
+    Serial.print(" and with MAC address ");
+    Serial.print(getMAC());
     Serial.println(); 
 
   }
@@ -183,12 +188,22 @@ void loop() {
   }
 }
 
+// in enterprise MAC may get randomised so we get the true mac
+String getMAC() {
+  uint8_t mac[6];
+  esp_wifi_get_mac(WIFI_IF_STA, mac);  // Get base MAC
+  char macStr[18];
+  sprintf(macStr, "%02X:%02X:%02X:%02X:%02X:%02X",
+          mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+  return String(macStr);
+}
+
 void checkForUpdate(){
 
   HTTPClient http;
   http.begin(updateTriggerURL);
 
-  String deviceID = WiFi.macAddress();  // Use MAC address as unique ID
+  String deviceID = getMAC();  // Use MAC address as unique ID
   http.addHeader("X-Device-ID", deviceID);
   
   int httpCode = http.POST("");
