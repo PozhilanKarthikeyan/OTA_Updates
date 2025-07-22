@@ -11,7 +11,6 @@ curl -X POST -F "file=@firmware/firmware.bin" http://{your_ip}:5000/upload
 */
 
 #include <WiFi.h>
-#include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include <HTTPUpdate.h>
@@ -34,7 +33,7 @@ String password;
 String username;
 
 // Laptop IP
-const char* LAPTOP_IP = "10.42.67.196";
+const char* LAPTOP_IP = "192.168.0.102";
 
 // Device Name
 const char* deviceName = "esp32_001";
@@ -188,6 +187,10 @@ void checkForUpdate(){
 
   HTTPClient http;
   http.begin(updateTriggerURL);
+
+  String deviceID = WiFi.macAddress();  // Use MAC address as unique ID
+  http.addHeader("X-Device-ID", deviceID);
+  
   int httpCode = http.POST("");
 
   if (httpCode == 200) {
