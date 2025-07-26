@@ -20,8 +20,6 @@ curl -X POST -F "file=@firmware/firmware.bin" -F "version="{your_version}"  http
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include <HTTPUpdate.h>
-#include "esp_wifi.h"
-#include "esp_system.h"
 #include <Preferences.h>
 
 #include "driver/twai.h"
@@ -216,6 +214,8 @@ void setup() {
     Serial.print("WiFi connection failed. Rebooting.");
     ESP.restart();
   }
+
+  checkForUpdate();
 }
 
 void loop() {
@@ -227,7 +227,8 @@ void loop() {
   // check for update
 
   if (currentTime - lastUpdateCheck > 10000) {
-    checkForUpdate();
+    // checkForUpdate(); 
+    // this causes 5 seconds lag do not uncomment this
     lastUpdateCheck = currentTime;
   }
   }
@@ -326,23 +327,11 @@ void loop() {
   vTaskDelay(pdMS_TO_TICKS(10));
 }
 
-// in enterprise MAC may get randomised so we get the true mac
-String getMAC() {
-  uint8_t mac[6];
-  esp_wifi_get_mac(WIFI_IF_STA, mac);  // Get base MAC
-  char macStr[18];
-  sprintf(macStr, "%02X:%02X:%02X:%02X:%02X:%02X",
-          mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-  return String(macStr);
-}
-
 void checkForUpdate(){
 
   HTTPClient http;
   http.begin(updateTriggerURL);
 
-  String deviceID = getMAC();  // Use MAC address as unique ID
-  http.addHeader("X-Device-ID", deviceID);
   http.addHeader("Version-ID", version);
   
   int httpCode = http.POST("");
@@ -395,7 +384,6 @@ void performUpdate(const char* url) {
 
       HTTPClient client;
       client.begin("http://" + String(LAPTOP_IP) + ":5000/report_success");
-      client.addHeader("X-Device-ID", getMAC());
       int httpCode = client.POST("");
       
       if(httpCode == 200) {

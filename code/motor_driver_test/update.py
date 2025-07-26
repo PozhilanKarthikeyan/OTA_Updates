@@ -6,7 +6,6 @@ LAPTOP_IP = "192.168.0.50"
 app = Flask(__name__)
 UPLOAD_FOLDER = "firmware"
 LATEST_BIN = "firmware.bin"
-updated_devies = set()
 
 with open("version.txt", "r") as file:
     version = file.read().strip().split("=")[1]
@@ -35,7 +34,6 @@ def upload_firmware():
         
     save_path = os.path.join(UPLOAD_FOLDER, LATEST_BIN)
     file.save(save_path)
-    updated_devies.clear()
 
     print(f"[UPLOAD] New Frimware uploaded, verison: {version}")
 
@@ -47,20 +45,15 @@ def firmware():
 
 @app.route("/update", methods=['POST'])
 def update():
-    global updated_devies, version
-    device_id = request.headers.get("X-Device-ID")
+    global version
     device_version = request.headers.get("Version-ID")
 
-    if not device_id:
-        return jsonify({"update": False})
     if not device_version:
-        return jsonify({"update": False})
-    if device_id in updated_devies:
         return jsonify({"update": False})
     if device_version.strip() == version.strip():
         return jsonify({"update": False})
     else:
-        print(f"[UPDATE STARTED] device: {device_id}, device_version: {device_version}, server_version: {version}")
+        print(f"[UPDATE STARTED] device_version: {device_version}, server_version: {version}")
         return jsonify({
             "update": True,
             "url": "http://" + LAPTOP_IP + ":5000/firmware.bin"
@@ -68,11 +61,9 @@ def update():
         
 @app.route("/report_success", methods = ["POST"])
 def report_success():
-    global updated_devies, version
-    device_id = request.headers.get("X-Device-ID")
+    global version
 
-    updated_devies.add(device_id)
-    print(f"[UPDATE COMPLETE] device: {device_id}, device_version: {version}")
+    print(f"[UPDATE COMPLETE] device_version: {version}")
     return jsonify({
         "success_code": 200,
         "current_version": version
