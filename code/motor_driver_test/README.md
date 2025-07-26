@@ -12,7 +12,7 @@ This is a simple OTA (Over-the-Air) firmware update system using Flask and two E
 │   └── receive.ino
 ├── firmware/               # Folder containing the compiled binary
 │   └── firmware.bin
-├── update.py                 # Flask OTA update server (runs on laptop)
+├── update.py               # Flask OTA update server (runs on laptop)
 └── README.md               # This file
 ```
 
