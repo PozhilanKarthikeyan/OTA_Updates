@@ -11,7 +11,7 @@ void setup() {
   // connect to AP Netowrk
   Serial.begin(115200);
   WiFi.softAPConfig(local_ip, gateway, subnet_mask);
-  WiFi.softAP(ap_ssid, ap_password);
+  WiFi.softAP(ap_ssid, ap_password, 1, 0, 9);
   Serial.print("Access point started with IP Address ");
   Serial.println(WiFi.softAPIP());
 }
