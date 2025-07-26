@@ -10,6 +10,6 @@ This is a simple OTA (Over-the-Air) firmware update server for ESP32 using Flask
 4. Start the server:
    python3 main.py
 5. Upload firmware:
-   curl -X POST -F "file=@firmware/firmware.bin" http://{your_ip}:5000/upload
+   curl -X POST -F "file=@firmware/firmware.bin" -F "version={version}" http://{your_ip}:5000/upload
 
 readme by OPENAI
