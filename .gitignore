@@ -6,3 +6,4 @@ code/http_test_2/build
 code/http_test_3/build
 ota_server
 OTA_Updates.code-workspace
+code/http_test_3/receive/build

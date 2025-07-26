@@ -2,11 +2,17 @@
 
 THIS IS AN EXAMPLE CODE 
 
+dir structure
+
+firmware/firmware.bin
+update.py
+version.txt
+
 to update the code,
 ip addr show and replace the ip here and in update.py 
 generate a bin file and put it on firmware and name it firmware.bin
 python3 update.py
-curl -X POST -F "file=@firmware/firmware.bin" http://{your_ip}:5000/upload
+curl -X POST -F "file=@firmware/firmware.bin" -F "version="{your_version}"  http://192.168.0.50:5000/upload
 
 */
 
@@ -16,6 +22,7 @@ curl -X POST -F "file=@firmware/firmware.bin" http://{your_ip}:5000/upload
 #include <HTTPUpdate.h>
 #include "esp_wifi.h"
 #include "esp_system.h"
+#include <Preferences.h>
 
 // bool variables to check conditions
 bool isEnterprise = false;
@@ -23,22 +30,15 @@ bool isLooped = false;
 bool isOTA = false;
 bool isSeriesTitlePrinted = false;
 
-// enterprise wifi details
-const String ENTERPRISE_WIFI[] = {
-  "iitmwifi",
-};
-const int NO_ENTERPRISE_WIFI = sizeof(ENTERPRISE_WIFI)/sizeof(ENTERPRISE_WIFI[0]);
-
 // WiFi details
-String ssid;
-String password;
-String username;
+const char* ssid = "ESP-AP";
+const char* password = "12345678";
 
 // Laptop IP
-const char* LAPTOP_IP = "192.168.0.102";
+const char* LAPTOP_IP = "192.168.0.50";
 
-// Device Name
-const char* deviceName = "esp32_001";
+// firmware Version
+String version = "";
 
 // webserver URL triggers
 const String updateTriggerURL = "http://" + String(LAPTOP_IP) + ":5000/update";
@@ -55,87 +55,31 @@ void checkForUpdate();
 void performUpdate();
 String getMAC();
 
+// preferences
+Preferences prefs;
+
 void setup() {
+
+  prefs.begin("ota", true);
+  version = prefs.getString("device_version", "0.0.0");
+  prefs.end();
   
   Serial.begin(115200);
   while (!Serial) {
     delay(10);
   }
   WiFi.mode(WIFI_STA);
-  Serial.println("Initiating WiFi Connection");
+  Serial.print("Initiating WiFi Connection");
 
-  // scan wifi networks
   WiFi.disconnect();
   delay(100);
 
-  int noOfNetworks = WiFi.scanNetworks();
-
-  if (noOfNetworks == 0) {
-    Serial.println("No networks found");
-  }
-  else {
-    Serial.print("Networks found with SSID: ");
-    for (int i = 0; i < noOfNetworks; i++) {
-      Serial.print(WiFi.SSID(i).c_str());
-      Serial.print(", ");
-    }
-
-    Serial.println();
-  }
-
-  // getting user input 
-  Serial.println("Enter SSID: ");
-  while (!Serial.available()) delay(10);
-  ssid = Serial.readStringUntil('\n');
-  ssid.trim(); // remove whitespace
-
-  // check for enterprise networks
-  isEnterprise = false;
-  for(int i = 0; i < NO_ENTERPRISE_WIFI; i++) {
-    if (ssid == ENTERPRISE_WIFI[i]) {
-      isEnterprise = true;
-      break;
-    }
-  }
-
-  // proceed with 2 actions based on isEnterprise or not
-  if (!isEnterprise) {
-    Serial.println("Enter Password: ");
-    while (!Serial.available()) delay(10);
-    password = Serial.readStringUntil('\n');
-    password.trim(); // remove whitespace
-
-    // connect to WiFi
-    Serial.print("Connecting to WiFi");
-    WiFi.begin(ssid.c_str(), password.c_str()); // convert to c string before sending connection
-  }
-  else {
-    Serial.println("Enter Username: ");
-    while (!Serial.available()) delay(10);
-    username = Serial.readStringUntil('\n');
-    username.trim(); // remove whitespace
-
-    const String identity = username;
-
-    Serial.println("Enter Password: ");
-    while (!Serial.available()) delay(10);
-    password = Serial.readStringUntil('\n');
-    password.trim(); // remove whitespace
-    
-    // connect to wifi
-    Serial.print("Connecting to WiFi");
-    wl_status_t status = WiFi.begin(
-      ssid.c_str(),
-      WPA2_AUTH_PEAP,
-      identity.c_str(),
-      username.c_str(),
-      password.c_str()
-    );
-  }
+  // connect to wifi
+  WiFi.begin(ssid, password);
 
   // restrict the no of connection attempts
   int attempts = 0;
-  while (WiFi.status() != WL_CONNECTED && attempts < 40){
+  while (WiFi.status() != WL_CONNECTED && attempts < 20){
     delay(500);
     Serial.print('.');
     attempts++;
@@ -149,8 +93,10 @@ void setup() {
     Serial.print(ssid);
     Serial.print(" ,with IP address ");
     Serial.print(WiFi.localIP());
-    Serial.print(" and with MAC address ");
+    Serial.print(" ,with MAC address ");
     Serial.print(getMAC());
+    Serial.print(" and version ");
+    Serial.print(version);
     Serial.println(); 
 
   }
@@ -205,6 +151,7 @@ void checkForUpdate(){
 
   String deviceID = getMAC();  // Use MAC address as unique ID
   http.addHeader("X-Device-ID", deviceID);
+  http.addHeader("Version-ID", version);
   
   int httpCode = http.POST("");
 
@@ -222,16 +169,14 @@ void checkForUpdate(){
 
     bool update = doc["update"];
     const char* url = doc["url"];
-
+    const char* reason = doc["error"];
+    
     if (update) {
       Serial.println("HTTP Update Triggered, performing OTA.");
       http.end();
       performUpdate(url);
     }
-  }
-  else {
-    Serial.print("HTTP Error: ");
-    Serial.println(httpCode);
+
   }
 
   http.end();
@@ -241,6 +186,7 @@ void performUpdate(const char* url) {
   Serial.println("Starting OTA update...");
 
   WiFiClient client;
+  httpUpdate.rebootOnUpdate(false);
   t_httpUpdate_return ret = httpUpdate.update(client, url);
 
   switch (ret) {
@@ -248,12 +194,46 @@ void performUpdate(const char* url) {
       Serial.printf("OTA failed. Error (%d): %s\n",
         httpUpdate.getLastError(),
         httpUpdate.getLastErrorString().c_str());
-      break;
+        break;
     case HTTP_UPDATE_NO_UPDATES:
       Serial.println("No OTA update available.");
       break;
     case HTTP_UPDATE_OK:
       Serial.println("OTA successful! Rebooting...");
+
+      HTTPClient client;
+      client.begin("http://" + String(LAPTOP_IP) + ":5000/report_success");
+      client.addHeader("X-Device-ID", getMAC());
+      int httpCode = client.POST("");
+      
+      if(httpCode == 200) {
+        String response = client.getString();
+        DynamicJsonDocument doc(1024);
+        DeserializationError error = deserializeJson(doc, response);
+
+        if (error) {
+          Serial.print("JSON parsing failed: ");
+          Serial.println(error.c_str());
+        } 
+        else {
+          const char* received_version = doc["current_version"];
+          const int success_code = doc["success_code"];
+          Serial.print("Updated to: ");
+          Serial.print(received_version);
+          Serial.println();
+          prefs.begin("ota", false);
+          prefs.putString("device_version", received_version);
+          prefs.end();
+        }
+      } 
+      else {
+        Serial.print("Failed to report success. HTTP code: ");
+        Serial.println(httpCode);
+      }
+
+      client.end();
+      ESP.restart();
       break;
+
   }
 }
