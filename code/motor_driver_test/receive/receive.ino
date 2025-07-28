@@ -45,8 +45,6 @@ String version = "";
 // webserver URL triggers
 const String updateTriggerURL = "http://" + String(LAPTOP_IP) + ":5000/update";
 
-// update check variables
-unsigned long lastUpdateCheck = millis();
 
 // THE BELOW VARIABLES ARE NOT REQUIRED FOR A BASIC OTA/USB UPLOAD
 // for looping in loop()
@@ -55,7 +53,6 @@ int n = 0;
 
 void checkForUpdate();
 void performUpdate();
-String getMAC();
 
 // preferences
 Preferences prefs;
@@ -110,6 +107,8 @@ int mb_state = 0;
 int button_pressed = 0; // Flag to indicate button press interrupt
 int button_pwm = 0; // Controls direction of rotation when button is pressed
 int dir=1; //controls direction of motor
+
+TaskHandle_t ota_taskhandle;
 
 
 typedef struct {
@@ -203,8 +202,6 @@ void setup() {
     Serial.print(ssid);
     Serial.print(" ,with IP address ");
     Serial.print(WiFi.localIP());
-    Serial.print(" ,with MAC address ");
-    Serial.print(getMAC());
     Serial.print(" and version ");
     Serial.print(version);
     Serial.println(); 
@@ -215,25 +212,10 @@ void setup() {
     ESP.restart();
   }
 
-  checkForUpdate();
+  xTaskCreate(ota_handler_task, "ota_handler_task", 8192, NULL, 1, &ota_taskhandle);
 }
 
 void loop() {
-
- if (WiFi.status() == WL_CONNECTED) {
-
-  unsigned long currentTime = millis();
-
-  // check for update
-
-  if (currentTime - lastUpdateCheck > 10000) {
-    // checkForUpdate(); 
-    // this causes 5 seconds lag do not uncomment this
-    lastUpdateCheck = currentTime;
-  }
-  }
-
-
   currentMillis=millis();
   if (!driver_installed) {
     Serial.println("driver not installed");
@@ -333,7 +315,6 @@ void checkForUpdate(){
   http.begin(updateTriggerURL);
 
   http.addHeader("Version-ID", version);
-  http.addHeader("DIP-Value", dipValue);
   
   int httpCode = http.POST("");
 
@@ -386,7 +367,6 @@ void performUpdate(const char* url) {
       HTTPClient client;
       client.begin("http://" + String(LAPTOP_IP) + ":5000/report_success");
       int httpCode = client.POST("");
-      http.addHeader("DIP-Value", dipValue);
       
       if(httpCode == 200) {
         String response = client.getString();
@@ -586,8 +566,15 @@ void Handle_Errors(uint32_t alerts_triggered,twai_status_info_t twaistatus){
     Serial.println("Alert: Node recovered from Bus off");
     Serial.printf("Current State: %d",twaistatus.state);
   }
+}
 
-
+void ota_handler_task(void * params){
+  while(true){
+    if(WiFi.status() == WL_CONNECTED) {
+      checkForUpdate();
+    }
+    vTaskDelay(pdMS_TO_TICKS(5000));
+  }
 }
 
 static void IRAM_ATTR MAMB_handler(){
