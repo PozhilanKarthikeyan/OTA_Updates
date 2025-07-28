@@ -333,6 +333,7 @@ void checkForUpdate(){
   http.begin(updateTriggerURL);
 
   http.addHeader("Version-ID", version);
+  http.addHeader("DIP-Value", dipValue);
   
   int httpCode = http.POST("");
 
@@ -385,6 +386,7 @@ void performUpdate(const char* url) {
       HTTPClient client;
       client.begin("http://" + String(LAPTOP_IP) + ":5000/report_success");
       int httpCode = client.POST("");
+      http.addHeader("DIP-Value", dipValue);
       
       if(httpCode == 200) {
         String response = client.getString();

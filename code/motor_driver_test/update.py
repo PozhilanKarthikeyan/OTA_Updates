@@ -47,13 +47,14 @@ def firmware():
 def update():
     global version
     device_version = request.headers.get("Version-ID")
+    dip_value = request.headers.get("DIP-Value")
 
     if not device_version:
         return jsonify({"update": False})
     if device_version.strip() == version.strip():
         return jsonify({"update": False})
     else:
-        print(f"[UPDATE STARTED] device_version: {device_version}, server_version: {version}")
+        print(f"[UPDATE STARTED] DIP Value {dip_value}, device_version: {device_version}, server_version: {version}")
         return jsonify({
             "update": True,
             "url": "http://" + LAPTOP_IP + ":5000/firmware.bin"
@@ -62,8 +63,9 @@ def update():
 @app.route("/report_success", methods = ["POST"])
 def report_success():
     global version
+    dip_value = request.headers.get("DIP-Value")
 
-    print(f"[UPDATE COMPLETE] device_version: {version}")
+    print(f"[UPDATE COMPLETE] DIP Value: {dip_value}, device_version: {version}")
     return jsonify({
         "success_code": 200,
         "current_version": version
