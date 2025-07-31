@@ -28,7 +28,7 @@ This is a simple OTA (Over-the-Air) firmware update system using Flask and two E
    - Connect to the AP Wi-Fi network hosted by the first ESP.
    - Start the OTA server:
      ```bash
-     python3 main.py
+     python3 update.py
      ```
 
 4. Compile the firmware for the **receiver ESP** and place the binary as:
