@@ -14,6 +14,7 @@ This is a simple OTA (Over-the-Air) firmware update system using Flask and two E
 │   └── firmware.bin
 ├── update.py               # Flask OTA update server (runs on laptop)
 └── README.md               # This file
+└── Templates               # HTML Templates
 ```
 
 ## 📋 Instructions
@@ -38,6 +39,11 @@ This is a simple OTA (Over-the-Air) firmware update system using Flask and two E
 5. Upload the firmware to the OTA server:
    ```bash
    curl -X POST -F "file=@firmware/firmware.bin" -F "version={version}" http://192.168.0.50:5000/upload
+   ```
+
+6. You can also use the GUI to upload:
+   ```
+   http://192.168.0.50:5000/upload
    ```
 
 6. Restart the ESP to update.
