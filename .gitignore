@@ -8,3 +8,5 @@ ota_server
 OTA_Updates.code-workspace
 code/http_test_3/receive/build
 code/http_test_3/test
+code/motor_driver_test/receive/build
+code/motor_driver_test/build

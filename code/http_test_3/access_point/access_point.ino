@@ -17,5 +17,9 @@ void setup() {
 }
 
 void loop() {
-
+  int numClients = WiFi.softAPgetStationNum();
+  Serial.print("Connected clients: ");
+  Serial.println(numClients);
+  
+  delay(2000);
 }

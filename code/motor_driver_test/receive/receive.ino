@@ -208,8 +208,7 @@ void setup() {
 
   }
   else {
-    Serial.print("WiFi connection failed. Rebooting.");
-    ESP.restart();
+    Serial.print("WiFi connection failed.");
   }
 
   xTaskCreate(ota_handler_task, "ota_handler_task", 8192, NULL, 1, &ota_taskhandle);
@@ -315,6 +314,7 @@ void checkForUpdate(){
   http.begin(updateTriggerURL);
 
   http.addHeader("Version-ID", version);
+  http.addHeader("DIP-Value", String(dipValue));
   
   int httpCode = http.POST("");
 
@@ -366,6 +366,7 @@ void performUpdate(const char* url) {
 
       HTTPClient client;
       client.begin("http://" + String(LAPTOP_IP) + ":5000/report_success");
+      client.addHeader("DIP-Value", String(dipValue));
       int httpCode = client.POST("");
       
       if(httpCode == 200) {
