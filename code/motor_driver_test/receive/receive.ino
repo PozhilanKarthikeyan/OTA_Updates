@@ -178,38 +178,6 @@ void setup() {
     delay(10);
   }
   WiFi.mode(WIFI_STA);
-  Serial.print("Initiating WiFi Connection");
-
-  WiFi.disconnect();
-  delay(100);
-
-  // connect to wifi
-  WiFi.begin(ssid, password);
-
-  // restrict the no of connection attempts
-  int attempts = 0;
-  while (WiFi.status() != WL_CONNECTED && attempts < 20){
-    delay(500);
-    Serial.print('.');
-    attempts++;
-  }
-
-  Serial.println();
-
-  // print success message
-  if (WiFi.status() == WL_CONNECTED) {
-    Serial.print("Connected to WIFI with SSID ");
-    Serial.print(ssid);
-    Serial.print(" ,with IP address ");
-    Serial.print(WiFi.localIP());
-    Serial.print(" and version ");
-    Serial.print(version);
-    Serial.println(); 
-
-  }
-  else {
-    Serial.print("WiFi connection failed.");
-  }
 
   xTaskCreate(ota_handler_task, "ota_handler_task", 8192, NULL, 1, &ota_taskhandle);
 }
@@ -573,6 +541,36 @@ void ota_handler_task(void * params){
   while(true){
     if(WiFi.status() == WL_CONNECTED) {
       checkForUpdate();
+    }
+    else {
+      Serial.print("Initiating WiFi Connection");
+
+      WiFi.disconnect();
+      delay(100);
+
+      // connect to wifi
+      WiFi.begin(ssid, password);
+
+      // restrict the no of connection attempts
+      int attempts = 0;
+      while (WiFi.status() != WL_CONNECTED && attempts < 20){
+        delay(500);
+        Serial.print('.');
+        attempts++;
+      }
+
+      Serial.println();
+
+      // print success message
+      if (WiFi.status() == WL_CONNECTED) {
+        Serial.print("Connected to WIFI with SSID ");
+        Serial.print(ssid);
+        Serial.print(" ,with IP address ");
+        Serial.print(WiFi.localIP());
+        Serial.print(" and version ");
+        Serial.print(version);
+        Serial.println();
+      }
     }
     vTaskDelay(pdMS_TO_TICKS(5000));
   }
