@@ -14,6 +14,8 @@ This is a simple OTA (Over-the-Air) firmware update system using Flask and two E
 │   └── firmware.bin
 ├── update.py               # Flask OTA update server (runs on laptop)
 ├── README.md               # This file
+├── esp_version.txt         # File containing ESP Firmware Versions
+├── server_version.txt      # File containing Server Firmware versions
 └── Templates               # HTML Templates
 ```
 
