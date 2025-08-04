@@ -36,9 +36,9 @@ This is a simple OTA (Over-the-Air) firmware update system using Flask and two E
    firmware/firmware.bin
    ```
 
-5. Upload the firmware to the OTA server:
+5. Upload the firmware to the OTA server (dip_value is an **optional argument**):
    ```bash
-   curl -X POST -F "file=@firmware/firmware.bin" -F "version={version}" http://192.168.0.50:5000/upload
+   curl -X POST -F "file=@firmware/firmware.bin" -F "version={version}" -F "dip_value=01" -F "dip_value-03" http://192.168.0.50:5000/upload
    ```
 
 6. You can also use the GUI to upload:
