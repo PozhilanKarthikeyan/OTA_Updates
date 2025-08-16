@@ -1,0 +1,20 @@
+# Compiled firmware
+firmware/*.bin
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+
+# Flask instance / config files
+instance/
+*.env
+
+# Editor/OS files
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Linting
+.flake8
+.mypy_cache/
+*.coverage

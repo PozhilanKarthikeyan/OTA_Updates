@@ -1,19 +1,42 @@
 /*
 
-THIS IS AN EXAMPLE CODE 
+ESP32 OTA Update Server (Flask)
 
-dir structure
+A simple Over-the-Air (OTA) firmware update system for two ESP32s using Flask.
 
-firmware/firmware.bin
-update.py
-version.txt
+1. Flash access_point/access_point.ino → creates Wi-Fi AP.
+2. Flash receive/receive.ino → connects to AP and checks for updates.
+3. Whenever you need to update, compile firmware for receiver ESP (motor driver ESP) and place in firmware/firmware.bin.
+4. Connect to the ESP32 AP from laptop (SSID: ESP-AP, Password: 12345678).
+5. Start the server:
+   python3 update.py
 
-to update the code,
-ip addr show and replace the ip here and in update.py 
-generate a bin file and put it on firmware and name it firmware.bin
-python3 update.py
-curl -X POST -F "file=@firmware/firmware.bin" -F "version="{your_version}"  http://192.168.0.50:5000/upload
+Instructions for non GUI users:
+6. Upload firmware:
+   curl -X POST -F "file=@firmware/firmware.bin" -F "version={your_version}" http://192.168.0.50:5000/upload
+   (Optional: add DIP values: -F "dip_value=01" -F "dip_value=03")
 
+Instructions for GUI users:
+6. Go to http://192.168.0.50:5000/
+
+Fixes:
+  1.less redendent
+  2. Remove pwm multiplier
+  3.Can and button simultaneously
+Flow:
+  1.Initizlization
+  2.Check if the CAN driver is installed.
+  3.Receive encoder values from PCNT.
+  4.Convert encoder values and accumulator data into angles.
+  5.Calculate DIP switch values.(goes into if statement only if interrupt occured)
+  6.Read alerts and status of can bus
+  7.handling of errors and alerts /// In v7 Recovery from bus off state is also included.
+  8.If a new CAN message is received, process it using alerts and provide PWM to the motor immediately.
+  9.else check for a button press; if pressed, provide PWM to the motor.
+  10.if delay is more than transmit rate then feedback message is sent.
+  11.delay of 10ms
+  12.OTA handler task runs in parallel to check for updates. 
+  
 */
 
 #include <WiFi.h>
@@ -178,39 +201,6 @@ void setup() {
     delay(10);
   }
   WiFi.mode(WIFI_STA);
-  Serial.print("Initiating WiFi Connection");
-
-  WiFi.disconnect();
-  delay(100);
-
-  // connect to wifi
-  WiFi.begin(ssid, password);
-
-  // restrict the no of connection attempts
-  int attempts = 0;
-  while (WiFi.status() != WL_CONNECTED && attempts < 20){
-    delay(500);
-    Serial.print('.');
-    attempts++;
-  }
-
-  Serial.println();
-
-  // print success message
-  if (WiFi.status() == WL_CONNECTED) {
-    Serial.print("Connected to WIFI with SSID ");
-    Serial.print(ssid);
-    Serial.print(" ,with IP address ");
-    Serial.print(WiFi.localIP());
-    Serial.print(" and version ");
-    Serial.print(version);
-    Serial.println(); 
-
-  }
-  else {
-    Serial.print("WiFi connection failed. Rebooting.");
-    ESP.restart();
-  }
 
   xTaskCreate(ota_handler_task, "ota_handler_task", 8192, NULL, 1, &ota_taskhandle);
 }
@@ -315,6 +305,7 @@ void checkForUpdate(){
   http.begin(updateTriggerURL);
 
   http.addHeader("Version-ID", version);
+  http.addHeader("DIP-Value", String(dipValue));
   
   int httpCode = http.POST("");
 
@@ -366,6 +357,7 @@ void performUpdate(const char* url) {
 
       HTTPClient client;
       client.begin("http://" + String(LAPTOP_IP) + ":5000/report_success");
+      client.addHeader("DIP-Value", String(dipValue));
       int httpCode = client.POST("");
       
       if(httpCode == 200) {
@@ -570,7 +562,39 @@ void Handle_Errors(uint32_t alerts_triggered,twai_status_info_t twaistatus){
 
 void ota_handler_task(void * params){
   while(true){
-    checkForUpdate();
+    if(WiFi.status() == WL_CONNECTED) {
+      checkForUpdate();
+    }
+    else {
+      Serial.print("Initiating WiFi Connection");
+
+      WiFi.disconnect();
+      delay(100);
+
+      // connect to wifi
+      WiFi.begin(ssid, password);
+
+      // restrict the no of connection attempts
+      int attempts = 0;
+      while (WiFi.status() != WL_CONNECTED && attempts < 20){
+        delay(500);
+        Serial.print('.');
+        attempts++;
+      }
+
+      Serial.println();
+
+      // print success message
+      if (WiFi.status() == WL_CONNECTED) {
+        Serial.print("Connected to WIFI with SSID ");
+        Serial.print(ssid);
+        Serial.print(" ,with IP address ");
+        Serial.print(WiFi.localIP());
+        Serial.print(" and version ");
+        Serial.print(version);
+        Serial.println();
+      }
+    }
     vTaskDelay(pdMS_TO_TICKS(5000));
   }
 }
