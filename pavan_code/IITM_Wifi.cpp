@@ -3,7 +3,7 @@
 const char* ssid = "iitmwifi";
 const char* identity = "ee24b048";
 const char* username = "ee24b048";
-const char* password = "pxA5SkzSu84";
+const char* password = "password";
 
 void setup() {
   Serial.begin(115200);
